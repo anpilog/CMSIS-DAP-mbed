@@ -18,11 +18,13 @@
 
 #include "target_struct.h"
 #include "swd_host.h"
+#include "target_reset.h"
 #include <stdint.h>
+#include <debug_cm.h>
+#include <RTL.h>
 
-#define FLASH_SECTOR_SIZE           (512)
-
-#define TARGET_AUTO_INCREMENT_PAGE_SIZE    0x1000
+#define FLASH_SECTOR_SIZE                  (512)
+#define TARGET_AUTO_INCREMENT_PAGE_SIZE    (512)
 
 static uint8_t target_flash_init(uint32_t clk);
 static uint8_t target_flash_uninit(void);
@@ -31,70 +33,49 @@ static uint8_t target_flash_erase_sector(uint32_t adr);
 static uint8_t target_flash_program_page(uint32_t adr, uint8_t * buf, uint32_t size);
 
 
-static const uint32_t flash_algo_blob[] = {
+static const uint32_t nRF51822AA_FLM[] = {
     0xE00ABE00, 0x062D780D, 0x24084068, 0xD3000040, 0x1E644058, 0x1C49D1FA, 0x2A001E52, 0x4770D1F2,
 
-    /*0x020*/ 0x4770ba40, 0x4770bac0, 0x48884987, 0xd0052a01L, 0xd0092a02L, 0xd00d2a03L, 0x47702001, 0x604a2202, 
-    /*0x040*/ 0x29006801, 0xe00ad0fcL, 0x604a2201, 0x29006801, 0xe004d0fcL, 0x604a2200, 0x29006801, 0x2000d0fc, 
-    /*0x060*/ 0x49794770, 0x60482000, 0x68014878, 0xd0fc2900L, 0x47702000, 0x4876b570, 0x4096841, 0xd00c0e09L, 
-    /*0x080*/ 0x6ae10404, 0xb2ca2501L, 0x49704b6f, 0xd0062a00L, 0x1c526802, 0x6800d021, 0x2001e019, 0x6aa0bd70, 
-    /*0x0A0*/ 0x6098e005, 0x2a00680a, 0x6922d0fc, 0x69221810, 0x43726966, 0xd8f44282L, 0x6808615d, 0xd0fc2800L, 
-    /*0x0C0*/ 0x6098e00f, 0x2a00680a, 0x6922d0fc, 0x69221810, 0x436a6965, 0xd8f44282L, 0x60dde003, 0x28006808, 
-    /*0x0E0*/ 0x2000d0fc, 0x581bd70, 0x2101d120, 0x690a0709, 0x435a694b, 0xd9174282L, 0x6126aca, 0xd1020e12L, 
-    /*0x100*/ 0x42816a89, 0x4952d810, 0x1c52680a, 0x680ad002, 0xd8094282L, 0x4096849, 0xd0070e09L, 0x6088494a, 
-    /*0x120*/ 0x6801484a, 0xd0fc2900L, 0x47702000, 0x47702001, 0x783b570, 0x78bd122, 0x2301d120, 0x691c071b, 
-    /*0x140*/ 0x436c695d, 0xd9194284L, 0x6246adc, 0xd1020e24L, 0x42846a9c, 0x4b3ed812, 0x1c64681c, 0x681dd002, 
-    /*0x160*/ 0xd80b4285L, 0x41b685b, 0xd0070e1bL, 0x4c372300, 0xe00b088dL, 0x58460099, 0xd0011c76L, 0xbd702001L, 
-    /*0x180*/ 0x50465856, 0x29006821, 0x1c5bd0fc, 0xd8f1429dL, 0xbd702000L, 0x783b570, 0x78bd125, 0x2501d123, 
-    /*0x1A0*/ 0x692b072d, 0x4363696c, 0xd91c4283L, 0x61b6aeb, 0xd1020e1bL, 0x42846aac, 0x4b25d815, 0x624685c, 
-    /*0x1C0*/ 0xd1020e24L, 0x4284681c, 0x685bd80d, 0xe1b041b, 0x2300d009, 0xe008088eL, 0x5905009c, 0x42a55914, 
-    /*0x1E0*/ 0x99d002, 0xbd701808L, 0x429e1c5b, 0x1840d8f4, 0xb530bd70L, 0xd1200783L, 0xd11e078bL, 0x71b2301, 
-    /*0x200*/ 0x695d691c, 0x4284436c, 0x6adcd91c, 0xe240624, 0x6a9cd102, 0xd8154284L, 0x685c4b0d, 0xe240624, 
-    /*0x220*/ 0x681dd102, 0xd80d4285L, 0x41b685b, 0xd0090e1bL, 0xe0052300L, 0x42945cc4, 0x2001d001, 0x1c5bbd30, 
-    /*0x240*/ 0xd3f7428bL, 0xbd302000L, 0x4001e500, 0x4001e400, 0x10001000, 0x0, 
+    /*0x020*/ 0x47702000, 0x47702000, 0x4c26b570, 0x60602002, 0x60e02001, 0x68284d24, 0xd00207c0L, 0x60602000, 
+    /*0x040*/ 0xf000bd70L, 0xe7f6f82cL, 0x4c1eb570, 0x60612102, 0x4288491e, 0x2001d302, 0xe0006160L, 0x4d1a60a0, 
+    /*0x060*/ 0xf81df000L, 0x7c06828, 0x2000d0fa, 0xbd706060L, 0x4605b5f8, 0x4813088e, 0x46142101, 0x4f126041, 
+    /*0x080*/ 0xc501cc01L, 0x7c06838, 0x1e76d006, 0x480dd1f8, 0x60412100, 0xbdf84608L, 0xf801f000L, 0x480ce7f2, 
+    /*0x0A0*/ 0x6006840, 0xd00b0e00L, 0x6849490a, 0xd0072900L, 0x4a0a4909, 0xd00007c3L, 0x1d09600a, 0xd1f90840L, 
+    /*0x0C0*/ 0x4770, 0x4001e500, 0x4001e400, 0x10001000, 0x40010400, 0x40010500, 0x40010600, 0x6e524635, 
+    /*0x0E0*/ 0x0, 
 };
 
 static const TARGET_FLASH flash = {
-    0x20000029, // Init
-    0x20000063, // UnInit
-    0x20000075, // EraseChip
-    0x200000E7, // EraseSector
-    0x20000131, // ProgramPage
+    0x20000021, // Init
+    0x20000025, // UnInit
+    0x20000029, // EraseChip
+    0x20000049, // EraseSector
+    0x20000071, // ProgramPage
 
-// RSB : base adreess is address of Execution Region PrgData in map file
-//       to access global/static data
-// RSP : Initial stack pointer
-
-    {0x20000001, 0x20000000+0x20+0x0234, 0x20000000 + 0x1000}, // {breakpoint, RSB, RSP}
-
-    0x20000400, // program_buffer
-    0x20000000, // algo_start
-    0x00000300, // algo_size
-    flash_algo_blob,// image
-    512         // ram_to_flash_bytes_to_be_written
+    // RSB : base adreess is address of Execution Region PrgData in map file
+    //       to access global/static data
+    // RSP : Initial stack pointer
+    {
+      0x20000001,             // breakpoint location
+      0x20000020+0x00000150,  // static_base
+      0x20001000              // stack_pointer
+    },
+    0x20000200,               // program_buffer
+    0x20000000,               // algo_start
+    0x00000150,               // algo_size
+    nRF51822AA_FLM,           // image
+    512                       // ram_to_flash_bytes_to_be_written
 };
 
+static uint8_t  flash_is_erase_all = 0;
+
 static uint8_t target_flash_init(uint32_t clk) {
-#if 0
     // Download flash programming algorithm to target and initialise.
     if (!swd_write_memory(flash.algo_start, (uint8_t *)flash.image, flash.algo_size)) {
         return 0;
     }
 
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0 /* clk value is not used */, 1, 0)) {
-        return 0;
-    }
-#endif
-    return 1;
-}
-
-static uint8_t target_flash_init_ex(uint32_t func) {
-    // Download flash programming algorithm to target and initialise.
-    if (!swd_write_memory(flash.algo_start, (uint8_t *)flash.image, flash.algo_size)) {
-        return 0;
-    }
-
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0, func, 0)) {
+    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0 /* clk value is not used */, 0, 0)) {
         return 0;
     }
 
@@ -103,27 +84,26 @@ static uint8_t target_flash_init_ex(uint32_t func) {
 
 static uint8_t target_flash_erase_sector(unsigned int sector) {
 #if 0
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_sector, sector*0x1000, 0, 0, 0)) {
+    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_sector, sector*FLASH_SECTOR_SIZE, 0, 0, 0)) {
         return 0;
     }
 #endif
-    return 1;
-}
-
-static uint8_t target_flash_erase_sector_ex(uint32_t addr) {
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_sector, addr, 0, 0, 0)) {
-        return 0;
-    }
-
     return 1;
 }
 
 static uint8_t target_flash_erase_chip(void) {
-#if 0
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_chip, 0, 0, 0, 0)) {
+    //
+	// 1 == O.K.
+	// 0 == Error
+	//
+   if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_chip, 0, 0, 0, 0)) {   // 1 == O.K., 0 == Error
         return 0;
     }
-#endif
+    
+//     target_set_state(RESET_PROGRAM);
+    target_flash_init(0);   
+
+    flash_is_erase_all = 1;      
     return 1;
 }
 
@@ -132,59 +112,50 @@ static uint16_t GetSecNum (unsigned long adr) {
     return (n);
 }
 
-static uint8_t target_flash_program_page(uint32_t addr, uint8_t * buf, uint32_t size)
-{ 
-#if 1
-    static uint16_t lastSecNum = 0xFFFF;
+uint8_t target_flash_program_page(uint32_t addr, uint8_t * buf, uint32_t size)
+{
+    static uint16_t lastSecNum = 0xFFF0;
     uint32_t bytes_written = 0;
     
-    addr += 0x00014000;
-    
-    // Download flash programming algorithm to target and initialise.
-    if (!swd_write_memory(flash.algo_start, (uint8_t *)flash.image, flash.algo_size)) {
-        return 0;
-    }
-    
-    // Program a page in target flash.
+	// Program a page in target flash.
     if (!swd_write_memory(flash.program_buffer, buf, size)) {
         return 0;
     }
-
+    
+    if (addr == 0) {
+        if (!target_flash_erase_chip()) { 
+            return 0;
+        }
+    }
+    
     while(bytes_written < size) {
-        
+        uint32_t bytes;
         uint16_t currentSecNum = GetSecNum(addr);
-      
-        if (currentSecNum != lastSecNum) {
-            if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0, 1, 0)) {
-                return 0;
-            }
-            
+        if ((addr < 0x1000000) && (0 == flash_is_erase_all) && (currentSecNum != lastSecNum)) {
             if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.erase_sector, addr, 0, 0, 0)) {
                 return 0;
             }
-            lastSecNum = currentSecNum;
             
-            if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0, 2, 0)) {
-                return 0;
-            }
+            lastSecNum = currentSecNum;
         }
-   
+        
+        if (size < flash.ram_to_flash_bytes_to_be_written) {
+            bytes = size;
+        } else {
+            bytes = flash.ram_to_flash_bytes_to_be_written;
+        }
+        
         if (!swd_flash_syscall_exec(&flash.sys_call_param,
                                     flash.program_page,
-                                    addr,
-                                    flash.ram_to_flash_bytes_to_be_written,
-                                    flash.program_buffer + bytes_written, 0)) {
+                                    addr,                                     // arg1
+                                    bytes,                                    // arg2
+                                    flash.program_buffer + bytes_written, 0)) { // arg3, arg4
             return 0;
         }
-
         bytes_written += flash.ram_to_flash_bytes_to_be_written;
         addr += flash.ram_to_flash_bytes_to_be_written;
     }
-    
-    if (!swd_flash_syscall_exec(&flash.sys_call_param, flash.init, 0, 0, 2, 0)) {
-        return 0;
-    }
-#endif
+
     return 1;
 }
 

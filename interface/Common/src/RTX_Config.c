@@ -28,10 +28,10 @@
 //   <i> Define max. number of tasks that will run at the same time.
 //   <i> Default: 6
 #ifndef OS_TASKCNT
-    #if defined(NO_SEMIHOST)
-        #define OS_TASKCNT    12
-    #else
+    #ifdef SEMIHOST
         #define OS_TASKCNT    13
+    #else
+        #define OS_TASKCNT    12
     #endif
 #endif
 
@@ -47,7 +47,7 @@
 //   <i> Set the stack size for tasks which is assigned by the system.
 //   <i> Default: 200
 #ifndef OS_STKSIZE
- #define OS_STKSIZE     95
+ #define OS_STKSIZE     110
 #endif
 
 // <q>Check for the stack overflow
@@ -75,6 +75,8 @@
 #ifndef OS_CLOCK
     #if defined(TARGET_LPC11U35) || defined(TARGET_MK20D5)
         #define OS_CLOCK       48000000
+    #elif defined(TARGET_LPC4322)
+        #define OS_CLOCK      204000000
     #endif
 #endif
 
