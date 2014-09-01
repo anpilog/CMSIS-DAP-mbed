@@ -21,20 +21,12 @@
 static uint16_t isr_flags;
 static OS_TID isr_notify;
 
-#ifdef DBG_LPC812
-#define SW_RESET_BUTTON    0
-#else
 #define SW_RESET_BUTTON    1
-#endif
 
 #ifdef SW_RESET_BUTTON
-#ifdef BOARD_ARCH_BLE
 #define RESET_PORT        (0)
 #define RESET_PIN         (1)
-#else
-#define RESET_PORT        (1)
-#define RESET_PIN         (19)
-#endif
+
 #define RESET_INT_CH      (0)
 #define RESET_INT_MASK    (1 << RESET_INT_CH)
 #endif

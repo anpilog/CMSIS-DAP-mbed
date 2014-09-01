@@ -127,10 +127,10 @@ Provides definitions about:
 #define PIN_SWDIO               (1 << PIN_SWDIO_IN_BIT)
 #define PIN_SWDIO_TMS_IOCON     LPC_IOCON->PIO0_9
 
-// nRESET Pin                   PIO0_1
-#define PIN_nRESET_IN_BIT       1
+// nRESET Pin                   PIO0_5
+#define PIN_nRESET_IN_BIT       5
 #define PIN_nRESET              (1 << PIN_nRESET_IN_BIT)
-#define PIN_nRESET_IOCON        LPC_IOCON->PIO0_1
+#define PIN_nRESET_IOCON        LPC_IOCON->PIO0_5
 
 #if (DAP_JTAG != 0)
 
