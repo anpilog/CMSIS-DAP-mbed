@@ -50,10 +50,13 @@ int32_t uart_initialize (void) {
     // alternate function USART and PullNone
     LPC_IOCON->PIO0_18 |= 0x01; // RXD
     LPC_IOCON->PIO0_19 |= 0x01; // TXD
-    LPC_IOCON->PIO0_7  |= 0x01; // CTS
-    LPC_IOCON->PIO0_17 |= 0x01; // RTS
+    LPC_IOCON->PIO0_7  = 0x11; // CTS
+    LPC_IOCON->PIO0_17 = 0x11; // RTS
 
-    // enable FIFOs (trigger level 1) and clear them
+//		LPC_GPIO->DIR[0] |= (0x01 << 7);
+//		LPC_GPIO->CLR[0] |= (0x01 << 7);
+
+		// enable FIFOs (trigger level 1) and clear them
     LPC_USART->FCR = 0x87;
 
     // Transmit Enable

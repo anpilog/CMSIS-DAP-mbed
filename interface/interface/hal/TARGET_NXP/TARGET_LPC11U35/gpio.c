@@ -33,7 +33,7 @@ static OS_TID isr_notify;
 
 #define PIN_DAP_LED       (1<<21)
 #define PIN_MSD_LED       (1<<20)
-#define PIN_CDC_LED       (1<<11)
+#define PIN_CDC_LED       (1<<22)
 
 void gpio_init(void) {
     // enable clock for GPIO port 0
